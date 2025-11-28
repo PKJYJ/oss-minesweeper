@@ -115,14 +115,47 @@ class Board:
 
     def reveal(self, col: int, row: int) -> None:
         # TODO: Reveal a cell; if zero-adjacent, iteratively flood to neighbors.
-        # if not self.is_inbounds(col, row):
-        #     return
-        # if not self._mines_placed:
-        #     self.place_mines(col, row)
+        if not self.is_inbounds(col, row):
+            return
+        if self.game_over:
+            return
 
-        
-        # self._check_win()
-        pass
+        if not self._mines_placed:
+            self.place_mines(col, row)
+
+        start_cell = self.cells[self.index(col, row)]
+
+        if start_cell.state.is_flagged:
+            return
+
+        if start_cell.state.is_mine:
+            start_cell.state.is_revealed = True
+            self.game_over = True
+            self._reveal_all_mines()
+            return
+
+        stack = [(col, row)]
+        while stack:
+            c, r = stack.pop()
+            if not self.is_inbounds(c, r):
+                continue
+            cell = self.cells[self.index(c, r)]
+
+            if cell.state.is_revealed or cell.state.is_flagged:
+                continue
+            if cell.state.is_mine:
+                continue
+
+            cell.state.is_revealed = True
+            self.revealed_count += 1
+
+            if cell.state.adjacent == 0:
+                for (nc, nr) in self.neighbors(c, r):
+                    neighbor_cell = self.cells[self.index(nc, nr)]
+                    if not neighbor_cell.state.is_revealed and not neighbor_cell.state.is_mine:
+                        stack.append((nc, nr))
+
+        self._check_win()
 
     def toggle_flag(self, col: int, row: int) -> None:
         # TODO: Toggle a flag on a non-revealed cell.
