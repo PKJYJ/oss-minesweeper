@@ -51,6 +51,18 @@ class Board:
     - Reveal cells (iterative flood fill when adjacent == 0)
     - Toggle flags, check win/lose conditions
     """
+    def get_safe_cell(self) -> tuple[int, int] | None:
+        # """[Issue #4] 아직 열리지 않은 안전한 칸 하나를 반환"""
+        import random
+        candidates = []
+        for cell in self.cells:
+            # 열리지 않았고, 지뢰가 아닌 칸
+            if not cell.state.is_revealed and not cell.state.is_mine:
+                candidates.append((cell.col, cell.row))
+        
+        if candidates:
+            return random.choice(candidates)
+        return None
 
     def __init__(self, cols: int, rows: int, mines: int):
         self.cols = cols
