@@ -93,11 +93,13 @@ class Renderer:
 
         buttons = [("Beg", 10, 8, 10), ("Int", 18, 14, 40), ("Adv", 24, 20, 99)]
         start_x = config.width - 160 
-
+        
         for i, (name, c, r, m) in enumerate(buttons):
             btn_rect = Rect(start_x + (i * 50), 10, 45, 30)
+            
             pygame.draw.rect(self.screen, (200, 200, 200), btn_rect)
             pygame.draw.rect(self.screen, (50, 50, 50), btn_rect, 2)
+            
             text = self.font.render(name, True, (0, 0, 0))
             self.screen.blit(text, text.get_rect(center=btn_rect.center))
 
@@ -105,19 +107,29 @@ class Renderer:
         if not text:
             return
 
+        # 1. 반투명 검은 배경
         overlay = pygame.Surface((config.width, config.height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, config.result_overlay_alpha))
         self.screen.blit(overlay, (0, 0))
 
+        # 2. 결과 텍스트 (GAME OVER 등)
         label = self.result_font.render(text, True, config.color_result)
+        # 텍스트를 화면 중앙보다 약간 위로 올림 (-30)
         rect = label.get_rect(center=(config.width // 2, config.height // 2 - 30))
         self.screen.blit(label, rect)
 
+        # 3. 재시작 버튼 그리기 (추가된 부분)
+        # 버튼 크기 설정 (너비 140, 높이 50)
         btn_rect = Rect(0, 0, 140, 50)
+        # 버튼 위치 설정 (화면 중앙, 텍스트 아래 +50)
         btn_rect.center = (config.width // 2, config.height // 2 + 50)
+
+        # 버튼 배경 (회색)
         pygame.draw.rect(self.screen, (200, 200, 200), btn_rect)
+        # 버튼 테두리 (진한 회색)
         pygame.draw.rect(self.screen, (50, 50, 50), btn_rect, 3)
 
+        # 버튼 텍스트 ("RESTART")
         btn_label = self.font.render("RESTART", True, (0, 0, 0))
         btn_label_rect = btn_label.get_rect(center=btn_rect.center)
         self.screen.blit(btn_label, btn_label_rect)
@@ -131,6 +143,7 @@ class InputController:
 
     def pos_to_grid(self, x: int, y: int):
         off_x, off_y = self.game.renderer.get_board_offset()
+        
         grid_width = self.game.board.cols * config.cell_size
         grid_height = self.game.board.rows * config.cell_size
         
@@ -165,10 +178,20 @@ class InputController:
             for i, (cols, rows, mines) in enumerate(buttons):
                 btn_rect = Rect(start_x + (i * 50), 10, 45, 30)
                 if btn_rect.collidepoint(pos):
-                    config.cols, config.rows, config.num_mines = cols, rows, mines
+                    # [요구사항 구현] 난이도별 설정값 변경
+                    config.cols = cols
+                    config.rows = rows
+                    config.num_mines = mines
+                    
+                    # 그리드가 바뀌었으니 화면 크기도 그에 맞춰 갱신 (안하면 맵이 잘림)
+                    config.width = config.margin_left + config.cols * config.cell_size + config.margin_right
+                    config.height = config.margin_top + config.rows * config.cell_size + config.margin_bottom
+                    self.game.screen = pygame.display.set_mode((config.width, config.height))
+                    
                     self.game.reset()
                     return
 
+        # 2. 게임 종료 시 재시작 버튼 (아까 구현한 것 유지)
         if self.game.board.game_over or self.game.board.win:
             if button == config.mouse_left:
                 btn_rect = Rect(0, 0, 140, 50)
@@ -177,13 +200,16 @@ class InputController:
                     self.game.reset()
             return
 
+        # 3. 보드 클릭
         col, row = self.pos_to_grid(pos[0], pos[1])
         if col == -1: return
             
         game = self.game
         if button == config.mouse_left:
+            # [Issue #4] 만약 힌트로 알려준 칸을 직접 열었다면 하이라이트 제거
             if game.hint_target == (col, row):
                 game.hint_target = None
+
             game.highlight_targets.clear()
             if not game.started:
                 game.started = True
@@ -191,15 +217,15 @@ class InputController:
             game.board.reveal(col, row)
             
         elif button == config.mouse_right:
-            # [Issue #6] Shift + ��Ŭ�� Ȯ��
+            # [Issue #6] Shift + ��Ŭ�� Ȯ��
             keys = pygame.key.get_pressed()
             is_shift = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
             
             if is_shift:
-                # Shift ���� ���¸� -> �ڵ� ���� (Chording)
+                # Shift ���� ���¸� -> �ڵ� ���� (Chording)
                 game.board.auto_reveal(col, row)
             else:
-                # �׳� ��Ŭ���̸� -> ��� �ȱ�
+                # �׳� ��Ŭ���̸� -> ��� �ȱ�
                 game.highlight_targets.clear()
                 game.board.toggle_flag(col, row)
             
@@ -254,13 +280,17 @@ class Game:
 
     def reset(self):
         self.board = Board(config.cols, config.rows, config.num_mines)
+        # Renderer를 새로 만드는 대신 board만 갈아끼워도 됩니다.
         self.renderer = Renderer(self.screen, self.board)
         self.input = InputController(self)
+        
         self.highlight_targets = set()
         self.highlight_until_ms = 0
         self.started = False
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
+        
+        # [Issue #4] 힌트 초기화
         self.hints_left = self.max_hints
         self.hint_target = None
 
@@ -292,15 +322,17 @@ class Game:
         
         self.screen.fill(config.color_bg)
         
+        # 상단 바 그리기 (hints_left 전달)
         remaining = max(0, config.num_mines - self.board.flagged_count())
         time_text = self._format_time(self._elapsed_ms())
-        
+
         hs_text = "00:00"
         if self.high_score is not None:
             hs_text = self._format_time(self.high_score)
-            
+
         self.renderer.draw_header(remaining, time_text, self.hints_left, hs_text)
-        
+
+        # 보드 그리기
         now = pygame.time.get_ticks()
         for r in range(self.board.rows):
             for c in range(self.board.cols):
@@ -322,13 +354,13 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     self.reset()
+                # [Issue #4] H키 입력 시 힌트 사용
                 elif event.key == pygame.K_h:
                     if self.hints_left > 0 and self.started and not self.board.game_over:
                         target = self.board.get_safe_cell()
                         if target:
                             self.hint_target = target
                             self.hints_left -= 1
-                            
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.input.handle_mouse(event.pos, event.button)
                 

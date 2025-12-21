@@ -24,7 +24,26 @@ class Cell:
 
 
 class Board:
-    """Minesweeper board state and rules."""
+    """Minesweeper board state and rules.
+
+    Responsibilities:
+    - Generate and place mines with first-click safety
+    - Compute adjacency counts for every cell
+    - Reveal cells (iterative flood fill when adjacent == 0)
+    - Toggle flags, check win/lose conditions
+    """
+    def get_safe_cell(self) -> tuple[int, int] | None:
+        # """[Issue #4] ì•„ì§ ì—´ë¦¬ì§€ ì•Šì€ ì•ˆì „í•œ ì¹¸ í•˜ë‚˜ë¥¼ ë°˜í™˜"""
+        import random
+        candidates = []
+        for cell in self.cells:
+            # ì—´ë¦¬ì§€ ì•Šì•˜ê³ , ì§€ë¢°ê°€ ì•„ë‹Œ ì¹¸
+            if not cell.state.is_revealed and not cell.state.is_mine:
+                candidates.append((cell.col, cell.row))
+        
+        if candidates:
+            return random.choice(candidates)
+        return None
 
     def __init__(self, cols: int, rows: int, mines: int):
         self.cols = cols
@@ -37,10 +56,10 @@ class Board:
         self.win = False
 
     def get_safe_cell(self) -> tuple[int, int] | None:
-        #"""[Issue #4] ¾ÆÁ÷ ¿­¸®Áö ¾ÊÀº ¾ÈÀüÇÑ Ä­ ÇÏ³ª¸¦ ¹İÈ¯"""
+        #"""[Issue #4] ì•„ì§ ì—´ë¦¬ì§€ ì•Šì€ ì•ˆì „í•œ ì¹¸ í•˜ë‚˜ë¥¼ ë°˜í™˜"""
         candidates = []
         for cell in self.cells:
-            # ¿­¸®Áö ¾Ê¾Ò°í, Áö·Ú°¡ ¾Æ´Ñ Ä­
+            # ì—´ë¦¬ì§€ ì•Šì•˜ê³ , ì§€ë¢°ê°€ ì•„ë‹Œ ì¹¸
             if not cell.state.is_revealed and not cell.state.is_mine:
                 candidates.append((cell.col, cell.row))
         
@@ -48,31 +67,31 @@ class Board:
             return random.choice(candidates)
         return None
 
-    # [Issue #6] ¼ıÀÚ Ä­ ÀÚµ¿ ¿­±â ·ÎÁ÷ Ãß°¡
+    # [Issue #6] ìˆ«ì ì¹¸ ìë™ ì—´ê¸° ë¡œì§ ì¶”ê°€
     def auto_reveal(self, col: int, row: int) -> None:
-        #"""Shift+¿ìÅ¬¸¯ ½Ã ÁÖº¯ ±ê¹ß °³¼ö°¡ ¸ÂÀ¸¸é ³ª¸ÓÁö Ä­ ¿ÀÇÂ"""
+        #"""Shift+ìš°í´ë¦­ ì‹œ ì£¼ë³€ ê¹ƒë°œ ê°œìˆ˜ê°€ ë§ìœ¼ë©´ ë‚˜ë¨¸ì§€ ì¹¸ ì˜¤í”ˆ"""
         if not self.is_inbounds(col, row):
             return
             
         idx = self.index(col, row)
         cell = self.cells[idx]
         
-        # 1. ÀÌ¹Ì ¿­¸° Ä­ÀÌ¾î¾ß ÇÏ°í, ¼ıÀÚ°¡ ÀÖ¾î¾ß ÇÔ (0ÀÌ ¾Æ´Ï¾î¾ß ÇÔ)
+        # 1. ì´ë¯¸ ì—´ë¦° ì¹¸ì´ì–´ì•¼ í•˜ê³ , ìˆ«ìê°€ ìˆì–´ì•¼ í•¨ (0ì´ ì•„ë‹ˆì–´ì•¼ í•¨)
         if not cell.state.is_revealed or cell.state.adjacent == 0:
             return
             
-        # 2. ÁÖº¯ ±ê¹ß °³¼ö ¼¼±â
+        # 2. ì£¼ë³€ ê¹ƒë°œ ê°œìˆ˜ ì„¸ê¸°
         neighbors = self.neighbors(col, row)
         flag_count = 0
         for (nc, nr) in neighbors:
             if self.cells[self.index(nc, nr)].state.is_flagged:
                 flag_count += 1
                 
-        # 3. ±ê¹ß °³¼ö¿Í ¼ıÀÚ°¡ °°À¸¸é -> ±ê¹ßÀÌ ¾Æ´Ñ ³ª¸ÓÁö Ä­µé ¿­±â
+        # 3. ê¹ƒë°œ ê°œìˆ˜ì™€ ìˆ«ìê°€ ê°™ìœ¼ë©´ -> ê¹ƒë°œì´ ì•„ë‹Œ ë‚˜ë¨¸ì§€ ì¹¸ë“¤ ì—´ê¸°
         if flag_count == cell.state.adjacent:
             for (nc, nr) in neighbors:
                 target = self.cells[self.index(nc, nr)]
-                # ±ê¹ßÀÌ ¾Æ´Ï°í ´İÇôÀÖ´Â Ä­¸¸ ¿­±â (ÇÔÁ¤ ¹ßµ¿ °¡´É)
+                # ê¹ƒë°œì´ ì•„ë‹ˆê³  ë‹«í˜€ìˆëŠ” ì¹¸ë§Œ ì—´ê¸° (í•¨ì • ë°œë™ ê°€ëŠ¥)
                 if not target.state.is_flagged and not target.state.is_revealed:
                     self.reveal(nc, nr)
 
