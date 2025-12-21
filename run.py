@@ -217,8 +217,17 @@ class InputController:
             game.board.reveal(col, row)
             
         elif button == config.mouse_right:
-            game.highlight_targets.clear()
-            game.board.toggle_flag(col, row)
+            # [Issue #6] Shift + ��Ŭ�� Ȯ��
+            keys = pygame.key.get_pressed()
+            is_shift = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+            
+            if is_shift:
+                # Shift ���� ���¸� -> �ڵ� ���� (Chording)
+                game.board.auto_reveal(col, row)
+            else:
+                # �׳� ��Ŭ���̸� -> ��� �ȱ�
+                game.highlight_targets.clear()
+                game.board.toggle_flag(col, row)
             
         elif button == config.mouse_middle:
             neighbors = game.board.neighbors(col, row)
@@ -236,7 +245,6 @@ class Game:
         pygame.init()
         pygame.display.set_caption(config.title)
         
-        # ������ ũ�⸦ '���(Adv)' �������� ����
         config.width = 20 + 24 * config.cell_size + 20
         config.height = 60 + 20 * config.cell_size + 20
         
