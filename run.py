@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Pygame presentation layer for Minesweeper.
 
@@ -86,15 +87,36 @@ class Renderer:
         self.screen.blit(right_label, (config.width - right_label.get_width() - 10, 12))
 
     def draw_result_overlay(self, text: str | None) -> None:
-        """Draw a semi-transparent overlay with centered result text, if any."""
+        """Draw a semi-transparent overlay with centered result text and a Restart button."""
         if not text:
             return
+
+        # 1. 반투명 검은 배경
         overlay = pygame.Surface((config.width, config.height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, config.result_overlay_alpha))
         self.screen.blit(overlay, (0, 0))
+
+        # 2. 결과 텍스트 (GAME OVER 등)
         label = self.result_font.render(text, True, config.color_result)
-        rect = label.get_rect(center=(config.width // 2, config.height // 2))
+        # 텍스트를 화면 중앙보다 약간 위로 올림 (-30)
+        rect = label.get_rect(center=(config.width // 2, config.height // 2 - 30))
         self.screen.blit(label, rect)
+
+        # 3. 재시작 버튼 그리기 (추가된 부분)
+        # 버튼 크기 설정 (너비 140, 높이 50)
+        btn_rect = Rect(0, 0, 140, 50)
+        # 버튼 위치 설정 (화면 중앙, 텍스트 아래 +50)
+        btn_rect.center = (config.width // 2, config.height // 2 + 50)
+
+        # 버튼 배경 (회색)
+        pygame.draw.rect(self.screen, (200, 200, 200), btn_rect)
+        # 버튼 테두리 (진한 회색)
+        pygame.draw.rect(self.screen, (50, 50, 50), btn_rect, 3)
+
+        # 버튼 텍스트 ("RESTART")
+        btn_label = self.font.render("RESTART", True, (0, 0, 0))
+        btn_label_rect = btn_label.get_rect(center=btn_rect.center)
+        self.screen.blit(btn_label, btn_label_rect)
 
 
 class InputController:
@@ -116,39 +138,44 @@ class InputController:
         return -1, -1
 
     def handle_mouse(self, pos, button) -> None:
-        # TODO: Handle mouse button events: left=reveal, right=flag, middle=neighbor highlight  in here
+        # TODO: Handle mouse button events: left=reveal, right=flag, middle=neighbor highlight
+        
+        # 1. 게임이 끝난 상태(게임 오버 또는 승리)인지 확인
+        if self.game.board.game_over or self.game.board.win:
+            # 좌클릭인 경우만 처리
+            if button == config.mouse_left:
+                # 버튼 위치를 다시 계산 (그리기 함수와 동일한 위치)
+                btn_rect = Rect(0, 0, 140, 50)
+                btn_rect.center = (config.width // 2, config.height // 2 + 50)
+                
+                # 마우스 클릭 위치(pos)가 버튼 안에 있는지 확인
+                if btn_rect.collidepoint(pos):
+                    self.game.reset() # 게임 재시작
+            return # 게임이 끝났으면 지뢰 클릭 등은 무시하고 리턴
+
+        # --- 아래는 기존 게임 플레이 로직 ---
         col, row = self.pos_to_grid(pos[0], pos[1])
         if col == -1:
             return
+            
         game = self.game
-        board = game.board
-
         if button == config.mouse_left:
             game.highlight_targets.clear()
-
-            if board.game_over or board.win:
-                return
-
-            board.reveal(col, row)
-
             if not game.started:
                 game.started = True
                 game.start_ticks_ms = pygame.time.get_ticks()
-
+            game.board.reveal(col, row)
+            
         elif button == config.mouse_right:
             game.highlight_targets.clear()
-
-            if board.game_over or board.win:
-                return
-
-            board.toggle_flag(col, row)
-
+            game.board.toggle_flag(col, row)
+            
         elif button == config.mouse_middle:
-            neighbors = board.neighbors(col, row)
+            neighbors = game.board.neighbors(col, row)
             game.highlight_targets = {
                 (nc, nr)
                 for (nc, nr) in neighbors
-                if not board.cells[board.index(nc, nr)].state.is_revealed
+                if not game.board.cells[game.board.index(nc, nr)].state.is_revealed
             }
             game.highlight_until_ms = pygame.time.get_ticks() + config.highlight_duration_ms
 
