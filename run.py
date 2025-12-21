@@ -72,7 +72,7 @@ class Renderer:
                 )
         pygame.draw.rect(self.screen, config.color_grid, rect, 1)
 
-    def draw_header(self, remaining_mines: int, time_text: str) -> None:
+    def draw_header(self, remaining_mines: int, time_text: str, hints_left: int) -> None:
         pygame.draw.rect(self.screen, config.color_header, (0, 0, config.width, config.margin_top))
 
         # 1. 지뢰 개수 / 시간 표시
@@ -82,20 +82,28 @@ class Renderer:
         time_label = self.header_font.render(time_text, True, config.color_header_text)
         self.screen.blit(time_label, (150, 12))
 
-        # 2. 난이도 버튼 (Beg, Int, Adv)
-        buttons = [("Beg", 10, 8, 10), ("Int", 18, 14, 40), ("Adv", 24, 20, 99)]
+        # 2. [Issue #4] 힌트 버튼 (중앙) - 추가된 부분
+        hint_btn_rect = Rect(config.width // 2 - 40, 10, 80, 30)
+        # 힌트가 남았으면 연한 노랑, 없으면 회색
+        btn_color = (255, 255, 200) if hints_left > 0 else (100, 100, 100)
+        
+        pygame.draw.rect(self.screen, btn_color, hint_btn_rect)
+        pygame.draw.rect(self.screen, (50, 50, 50), hint_btn_rect, 2)
 
+        hint_text = self.font.render(f"Hint: {hints_left}", True, (0, 0, 0))
+        text_rect = hint_text.get_rect(center=hint_btn_rect.center)
+        self.screen.blit(hint_text, text_rect)
+
+        # 3. 난이도 버튼 (Beg, Int, Adv) - 기존 유지
+        buttons = [("Beg", 10, 8, 10), ("Int", 18, 14, 40), ("Adv", 24, 20, 99)]
         start_x = config.width - 160 
 
         for i, (name, c, r, m) in enumerate(buttons):
             btn_rect = Rect(start_x + (i * 50), 10, 45, 30)
-
             pygame.draw.rect(self.screen, (200, 200, 200), btn_rect)
             pygame.draw.rect(self.screen, (50, 50, 50), btn_rect, 2)
-
             text = self.font.render(name, True, (0, 0, 0))
-            text_rect = text.get_rect(center=btn_rect.center)
-            self.screen.blit(text, text_rect)
+            self.screen.blit(text, text.get_rect(center=btn_rect.center))
 
     def draw_result_overlay(self, text: str | None) -> None:
         """Draw a semi-transparent overlay with centered result text and a Restart button."""
@@ -149,33 +157,33 @@ class InputController:
         return -1, -1
 
     def handle_mouse(self, pos, button) -> None:
-        # 1. 상단 난이도 버튼 클릭 처리
+        # 1. 상단 바 클릭 처리
         if pos[1] < config.margin_top and button == config.mouse_left:
-            buttons = [
-                (10, 8, 10),   # 초급 (10*8, 지뢰 10)
-                (18, 14, 40),  # 중급 (18*14, 지뢰 40)
-                (24, 20, 99)   # 상급 (24*20, 지뢰 99)
-            ]
-            
+            # [Issue #4] 힌트 버튼 클릭 확인
+            hint_btn_rect = Rect(config.width // 2 - 40, 10, 80, 30)
+            if hint_btn_rect.collidepoint(pos):
+                # 힌트 사용 조건: 횟수 남음, 게임 시작됨, 게임 안 끝남
+                if self.game.hints_left > 0 and self.game.started and not self.game.board.game_over:
+                    target = self.game.board.get_safe_cell()
+                    if target:
+                        self.game.hint_target = target
+                        self.game.hints_left -= 1
+                return
+
+            # [Issue #3] 난이도 버튼 클릭
+            buttons = [(10, 8, 10), (18, 14, 40), (24, 20, 99)]
             start_x = config.width - 160
             for i, (cols, rows, mines) in enumerate(buttons):
                 btn_rect = Rect(start_x + (i * 50), 10, 45, 30)
-                
                 if btn_rect.collidepoint(pos):
-                    # [요구사항 구현] 난이도별 설정값 변경
-                    config.cols = cols
-                    config.rows = rows
-                    config.num_mines = mines
-                    
-                    # 그리드가 바뀌었으니 화면 크기도 그에 맞춰 갱신 (안하면 맵이 잘림)
+                    config.cols, config.rows, config.num_mines = cols, rows, mines
                     config.width = config.margin_left + config.cols * config.cell_size + config.margin_right
                     config.height = config.margin_top + config.rows * config.cell_size + config.margin_bottom
                     self.game.screen = pygame.display.set_mode((config.width, config.height))
-                    
                     self.game.reset()
                     return
 
-        # 2. 게임 종료 시 재시작 버튼 (아까 구현한 것 유지)
+        # 2. 게임 종료 재시작 버튼
         if self.game.board.game_over or self.game.board.win:
             if button == config.mouse_left:
                 btn_rect = Rect(0, 0, 140, 50)
@@ -184,12 +192,16 @@ class InputController:
                     self.game.reset()
             return
 
-        # 3. 게임 플레이 로직 (기존 코드 유지)
+        # 3. 보드 클릭
         col, row = self.pos_to_grid(pos[0], pos[1])
         if col == -1: return
             
         game = self.game
         if button == config.mouse_left:
+            # [Issue #4] 만약 힌트로 알려준 칸을 직접 열었다면 하이라이트 제거
+            if game.hint_target == (col, row):
+                game.hint_target = None
+
             game.highlight_targets.clear()
             if not game.started:
                 game.started = True
@@ -218,24 +230,30 @@ class Game:
         pygame.display.set_caption(config.title)
         self.screen = pygame.display.set_mode(config.display_dimension)
         self.clock = pygame.time.Clock()
+        
+        # [Issue #4] 힌트 변수 초기화
+        self.max_hints = 2
+        self.hints_left = self.max_hints
+        self.hint_target = None
+        
+        self.reset()
+
+    def reset(self):
+        """Reset the game state and start a new board."""
         self.board = Board(config.cols, config.rows, config.num_mines)
+        # Renderer를 새로 만드는 대신 board만 갈아끼워도 됩니다.
         self.renderer = Renderer(self.screen, self.board)
         self.input = InputController(self)
+        
         self.highlight_targets = set()
         self.highlight_until_ms = 0
         self.started = False
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
-
-    def reset(self):
-        """Reset the game state and start a new board."""
-        self.board = Board(config.cols, config.rows, config.num_mines)
-        self.renderer.board = self.board
-        self.highlight_targets.clear()
-        self.highlight_until_ms = 0
-        self.started = False
-        self.start_ticks_ms = 0
-        self.end_ticks_ms = 0
+        
+        # [Issue #4] 힌트 초기화
+        self.hints_left = self.max_hints
+        self.hint_target = None
 
     def _elapsed_ms(self) -> int:
         """Return elapsed time in milliseconds (stops when game ends)."""
@@ -264,15 +282,27 @@ class Game:
         """Render one frame: header, grid, result overlay."""
         if pygame.time.get_ticks() > self.highlight_until_ms and self.highlight_targets:
             self.highlight_targets.clear()
+        
         self.screen.fill(config.color_bg)
+        
+        # 상단 바 그리기 (hints_left 전달)
         remaining = max(0, config.num_mines - self.board.flagged_count())
         time_text = self._format_time(self._elapsed_ms())
-        self.renderer.draw_header(remaining, time_text)
+        self.renderer.draw_header(remaining, time_text, self.hints_left)
+        
+        # 보드 그리기
         now = pygame.time.get_ticks()
         for r in range(self.board.rows):
             for c in range(self.board.cols):
                 highlighted = (now <= self.highlight_until_ms) and ((c, r) in self.highlight_targets)
                 self.renderer.draw_cell(c, r, highlighted)
+        
+        # [Issue #4] 힌트 타겟 하이라이트 (초록색 테두리) - 보드 위에 덧그리기
+        if self.hint_target:
+            hc, hr = self.hint_target
+            rect = self.renderer.cell_rect(hc, hr)
+            pygame.draw.rect(self.screen, (0, 255, 0), rect, 3) # 두께 3의 초록색 테두리
+
         self.renderer.draw_result_overlay(self._result_text())
         pygame.display.flip()
 
@@ -284,8 +314,17 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     self.reset()
+                # [Issue #4] H키 입력 시 힌트 사용
+                elif event.key == pygame.K_h:
+                    if self.hints_left > 0 and self.started and not self.board.game_over:
+                        target = self.board.get_safe_cell()
+                        if target:
+                            self.hint_target = target
+                            self.hints_left -= 1
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.input.handle_mouse(event.pos, event.button)
+                
         if (self.board.game_over or self.board.win) and self.started and not self.end_ticks_ms:
             self.end_ticks_ms = pygame.time.get_ticks()
         self.draw()
