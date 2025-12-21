@@ -73,17 +73,17 @@ class Renderer:
         pygame.draw.rect(self.screen, config.color_grid, rect, 1)
 
     def draw_header(self, remaining_mines: int, time_text: str) -> None:
-        # [¼öÁ¤µÊ] config.color_header_bg -> config.color_header ·Î º¯°æ
+        # [ìˆ˜ì •ë¨] config.color_header_bg -> config.color_header ë¡œ ë³€ê²½
         pygame.draw.rect(self.screen, config.color_header, (0, 0, config.width, config.margin_top))
         
-        # 1. Áö·Ú °³¼ö / ½Ã°£ Ç¥½Ã
+        # 1. ì§€ë¢° ê°œìˆ˜ / ì‹œê°„ í‘œì‹œ
         mines_label = self.header_font.render(f"Mines: {remaining_mines}", True, config.color_header_text)
         self.screen.blit(mines_label, (20, 12))
         
         time_label = self.header_font.render(time_text, True, config.color_header_text)
         self.screen.blit(time_label, (150, 12))
 
-        # 2. ³­ÀÌµµ ¹öÆ° (Beg, Int, Adv)
+        # 2. ë‚œì´ë„ ë²„íŠ¼ (Beg, Int, Adv)
         buttons = [("Beg", 10, 8, 10), ("Int", 18, 14, 40), ("Adv", 24, 20, 99)]
         
         start_x = config.width - 160 
@@ -103,29 +103,29 @@ class Renderer:
         if not text:
             return
 
-        # 1. ¹İÅõ¸í °ËÀº ¹è°æ
+        # 1. ë°˜íˆ¬ëª… ê²€ì€ ë°°ê²½
         overlay = pygame.Surface((config.width, config.height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, config.result_overlay_alpha))
         self.screen.blit(overlay, (0, 0))
 
-        # 2. °á°ú ÅØ½ºÆ® (GAME OVER µî)
+        # 2. ê²°ê³¼ í…ìŠ¤íŠ¸ (GAME OVER ë“±)
         label = self.result_font.render(text, True, config.color_result)
-        # ÅØ½ºÆ®¸¦ È­¸é Áß¾Óº¸´Ù ¾à°£ À§·Î ¿Ã¸² (-30)
+        # í…ìŠ¤íŠ¸ë¥¼ í™”ë©´ ì¤‘ì•™ë³´ë‹¤ ì•½ê°„ ìœ„ë¡œ ì˜¬ë¦¼ (-30)
         rect = label.get_rect(center=(config.width // 2, config.height // 2 - 30))
         self.screen.blit(label, rect)
 
-        # 3. Àç½ÃÀÛ ¹öÆ° ±×¸®±â (Ãß°¡µÈ ºÎºĞ)
-        # ¹öÆ° Å©±â ¼³Á¤ (³Êºñ 140, ³ôÀÌ 50)
+        # 3. ì¬ì‹œì‘ ë²„íŠ¼ ê·¸ë¦¬ê¸° (ì¶”ê°€ëœ ë¶€ë¶„)
+        # ë²„íŠ¼ í¬ê¸° ì„¤ì • (ë„ˆë¹„ 140, ë†’ì´ 50)
         btn_rect = Rect(0, 0, 140, 50)
-        # ¹öÆ° À§Ä¡ ¼³Á¤ (È­¸é Áß¾Ó, ÅØ½ºÆ® ¾Æ·¡ +50)
+        # ë²„íŠ¼ ìœ„ì¹˜ ì„¤ì • (í™”ë©´ ì¤‘ì•™, í…ìŠ¤íŠ¸ ì•„ë˜ +50)
         btn_rect.center = (config.width // 2, config.height // 2 + 50)
 
-        # ¹öÆ° ¹è°æ (È¸»ö)
+        # ë²„íŠ¼ ë°°ê²½ (íšŒìƒ‰)
         pygame.draw.rect(self.screen, (200, 200, 200), btn_rect)
-        # ¹öÆ° Å×µÎ¸® (ÁøÇÑ È¸»ö)
+        # ë²„íŠ¼ í…Œë‘ë¦¬ (ì§„í•œ íšŒìƒ‰)
         pygame.draw.rect(self.screen, (50, 50, 50), btn_rect, 3)
 
-        # ¹öÆ° ÅØ½ºÆ® ("RESTART")
+        # ë²„íŠ¼ í…ìŠ¤íŠ¸ ("RESTART")
         btn_label = self.font.render("RESTART", True, (0, 0, 0))
         btn_label_rect = btn_label.get_rect(center=btn_rect.center)
         self.screen.blit(btn_label, btn_label_rect)
@@ -150,12 +150,12 @@ class InputController:
         return -1, -1
 
     def handle_mouse(self, pos, button) -> None:
-        # 1. »ó´Ü ³­ÀÌµµ ¹öÆ° Å¬¸¯ Ã³¸®
+        # 1. ìƒë‹¨ ë‚œì´ë„ ë²„íŠ¼ í´ë¦­ ì²˜ë¦¬
         if pos[1] < config.margin_top and button == config.mouse_left:
             buttons = [
-                (10, 8, 10),   # ÃÊ±Ş (10*8, Áö·Ú 10)
-                (18, 14, 40),  # Áß±Ş (18*14, Áö·Ú 40)
-                (24, 20, 99)   # »ó±Ş (24*20, Áö·Ú 99)
+                (10, 8, 10),   # ì´ˆê¸‰ (10*8, ì§€ë¢° 10)
+                (18, 14, 40),  # ì¤‘ê¸‰ (18*14, ì§€ë¢° 40)
+                (24, 20, 99)   # ìƒê¸‰ (24*20, ì§€ë¢° 99)
             ]
             
             start_x = config.width - 160
@@ -163,12 +163,12 @@ class InputController:
                 btn_rect = Rect(start_x + (i * 50), 10, 45, 30)
                 
                 if btn_rect.collidepoint(pos):
-                    # [¿ä±¸»çÇ× ±¸Çö] ³­ÀÌµµº° ¼³Á¤°ª º¯°æ
+                    # [ìš”êµ¬ì‚¬í•­ êµ¬í˜„] ë‚œì´ë„ë³„ ì„¤ì •ê°’ ë³€ê²½
                     config.cols = cols
                     config.rows = rows
                     config.num_mines = mines
                     
-                    # ±×¸®µå°¡ ¹Ù²î¾úÀ¸´Ï È­¸é Å©±âµµ ±×¿¡ ¸ÂÃç °»½Å (¾ÈÇÏ¸é ¸ÊÀÌ Àß¸²)
+                    # ê·¸ë¦¬ë“œê°€ ë°”ë€Œì—ˆìœ¼ë‹ˆ í™”ë©´ í¬ê¸°ë„ ê·¸ì— ë§ì¶° ê°±ì‹  (ì•ˆí•˜ë©´ ë§µì´ ì˜ë¦¼)
                     config.width = config.margin_left + config.cols * config.cell_size + config.margin_right
                     config.height = config.margin_top + config.rows * config.cell_size + config.margin_bottom
                     self.game.screen = pygame.display.set_mode((config.width, config.height))
@@ -176,7 +176,7 @@ class InputController:
                     self.game.reset()
                     return
 
-        # 2. °ÔÀÓ Á¾·á ½Ã Àç½ÃÀÛ ¹öÆ° (¾Æ±î ±¸ÇöÇÑ °Í À¯Áö)
+        # 2. ê²Œì„ ì¢…ë£Œ ì‹œ ì¬ì‹œì‘ ë²„íŠ¼ (ì•„ê¹Œ êµ¬í˜„í•œ ê²ƒ ìœ ì§€)
         if self.game.board.game_over or self.game.board.win:
             if button == config.mouse_left:
                 btn_rect = Rect(0, 0, 140, 50)
@@ -185,12 +185,16 @@ class InputController:
                     self.game.reset()
             return
 
-        # 3. °ÔÀÓ ÇÃ·¹ÀÌ ·ÎÁ÷ (±âÁ¸ ÄÚµå À¯Áö)
+        # 3. ë³´ë“œ í´ë¦­
         col, row = self.pos_to_grid(pos[0], pos[1])
         if col == -1: return
             
         game = self.game
         if button == config.mouse_left:
+            # [Issue #4] ë§Œì•½ íŒíŠ¸ë¡œ ì•Œë ¤ì¤€ ì¹¸ì„ ì§ì ‘ ì—´ì—ˆë‹¤ë©´ í•˜ì´ë¼ì´íŠ¸ ì œê±°
+            if game.hint_target == (col, row):
+                game.hint_target = None
+
             game.highlight_targets.clear()
             if not game.started:
                 game.started = True
@@ -209,6 +213,8 @@ class InputController:
             }
             game.highlight_until_ms = pygame.time.get_ticks() + config.highlight_duration_ms
 
+
+
 class Game:
     """Main application object orchestrating loop and high-level state."""
 
@@ -217,24 +223,30 @@ class Game:
         pygame.display.set_caption(config.title)
         self.screen = pygame.display.set_mode(config.display_dimension)
         self.clock = pygame.time.Clock()
+        
+        # [Issue #4] íŒíŠ¸ ë³€ìˆ˜ ì´ˆê¸°í™”
+        self.max_hints = 2
+        self.hints_left = self.max_hints
+        self.hint_target = None
+        
+        self.reset()
+
+    def reset(self):
+        """Reset the game state and start a new board."""
         self.board = Board(config.cols, config.rows, config.num_mines)
+        # Rendererë¥¼ ìƒˆë¡œ ë§Œë“œëŠ” ëŒ€ì‹  boardë§Œ ê°ˆì•„ë¼ì›Œë„ ë©ë‹ˆë‹¤.
         self.renderer = Renderer(self.screen, self.board)
         self.input = InputController(self)
+        
         self.highlight_targets = set()
         self.highlight_until_ms = 0
         self.started = False
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
-
-    def reset(self):
-        """Reset the game state and start a new board."""
-        self.board = Board(config.cols, config.rows, config.num_mines)
-        self.renderer.board = self.board
-        self.highlight_targets.clear()
-        self.highlight_until_ms = 0
-        self.started = False
-        self.start_ticks_ms = 0
-        self.end_ticks_ms = 0
+        
+        # [Issue #4] íŒíŠ¸ ì´ˆê¸°í™”
+        self.hints_left = self.max_hints
+        self.hint_target = None
 
     def _elapsed_ms(self) -> int:
         """Return elapsed time in milliseconds (stops when game ends)."""
@@ -263,15 +275,27 @@ class Game:
         """Render one frame: header, grid, result overlay."""
         if pygame.time.get_ticks() > self.highlight_until_ms and self.highlight_targets:
             self.highlight_targets.clear()
+        
         self.screen.fill(config.color_bg)
+        
+        # ìƒë‹¨ ë°” ê·¸ë¦¬ê¸° (hints_left ì „ë‹¬)
         remaining = max(0, config.num_mines - self.board.flagged_count())
         time_text = self._format_time(self._elapsed_ms())
-        self.renderer.draw_header(remaining, time_text)
+        self.renderer.draw_header(remaining, time_text, self.hints_left)
+        
+        # ë³´ë“œ ê·¸ë¦¬ê¸°
         now = pygame.time.get_ticks()
         for r in range(self.board.rows):
             for c in range(self.board.cols):
                 highlighted = (now <= self.highlight_until_ms) and ((c, r) in self.highlight_targets)
                 self.renderer.draw_cell(c, r, highlighted)
+        
+        # [Issue #4] íŒíŠ¸ íƒ€ê²Ÿ í•˜ì´ë¼ì´íŠ¸ (ì´ˆë¡ìƒ‰ í…Œë‘ë¦¬) - ë³´ë“œ ìœ„ì— ë§ê·¸ë¦¬ê¸°
+        if self.hint_target:
+            hc, hr = self.hint_target
+            rect = self.renderer.cell_rect(hc, hr)
+            pygame.draw.rect(self.screen, (0, 255, 0), rect, 3) # ë‘ê»˜ 3ì˜ ì´ˆë¡ìƒ‰ í…Œë‘ë¦¬
+
         self.renderer.draw_result_overlay(self._result_text())
         pygame.display.flip()
 
@@ -283,8 +307,17 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     self.reset()
+                # [Issue #4] Hí‚¤ ì…ë ¥ ì‹œ íŒíŠ¸ ì‚¬ìš©
+                elif event.key == pygame.K_h:
+                    if self.hints_left > 0 and self.started and not self.board.game_over:
+                        target = self.board.get_safe_cell()
+                        if target:
+                            self.hint_target = target
+                            self.hints_left -= 1
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.input.handle_mouse(event.pos, event.button)
+                
         if (self.board.game_over or self.board.win) and self.started and not self.end_ticks_ms:
             self.end_ticks_ms = pygame.time.get_ticks()
         self.draw()
