@@ -1,15 +1,5 @@
 """
 Core game logic for Minesweeper.
-
-This module contains pure domain logic without any pygame or pixel-level
-concerns. It defines:
-- CellState: the state of a single cell
-- Cell: a cell positioned by (col,row) with an attached CellState
-- Board: grid management, mine placement, adjacency computation, reveal/flag
-
-The Board exposes imperative methods that the presentation layer (run.py)
-can call in response to user inputs, and does not know anything about
-rendering, timing, or input devices.
 """
 
 import random
@@ -17,15 +7,7 @@ from typing import List, Tuple
 
 
 class CellState:
-    """Mutable state of a single cell.
-
-    Attributes:
-        is_mine: Whether this cell contains a mine.
-        is_revealed: Whether the cell has been revealed to the player.
-        is_flagged: Whether the player flagged this cell as a mine.
-        adjacent: Number of adjacent mines in the 8 neighboring cells.
-    """
-
+    """Mutable state of a single cell."""
     def __init__(self, is_mine: bool = False, is_revealed: bool = False, is_flagged: bool = False, adjacent: int = 0):
         self.is_mine = is_mine
         self.is_revealed = is_revealed
@@ -35,7 +17,6 @@ class CellState:
 
 class Cell:
     """Logical cell positioned on the board by column and row."""
-
     def __init__(self, col: int, row: int):
         self.col = col
         self.row = row
@@ -43,14 +24,7 @@ class Cell:
 
 
 class Board:
-    """Minesweeper board state and rules.
-
-    Responsibilities:
-    - Generate and place mines with first-click safety
-    - Compute adjacency counts for every cell
-    - Reveal cells (iterative flood fill when adjacent == 0)
-    - Toggle flags, check win/lose conditions
-    """
+    """Minesweeper board state and rules."""
 
     def __init__(self, cols: int, rows: int, mines: int):
         self.cols = cols
@@ -62,32 +36,66 @@ class Board:
         self.game_over = False
         self.win = False
 
+    def get_safe_cell(self) -> tuple[int, int] | None:
+        #"""[Issue #4] 아직 열리지 않은 안전한 칸 하나를 반환"""
+        candidates = []
+        for cell in self.cells:
+            # 열리지 않았고, 지뢰가 아닌 칸
+            if not cell.state.is_revealed and not cell.state.is_mine:
+                candidates.append((cell.col, cell.row))
+        
+        if candidates:
+            return random.choice(candidates)
+        return None
+
+    # [Issue #6] 숫자 칸 자동 열기 로직 추가
+    def auto_reveal(self, col: int, row: int) -> None:
+        #"""Shift+우클릭 시 주변 깃발 개수가 맞으면 나머지 칸 오픈"""
+        if not self.is_inbounds(col, row):
+            return
+            
+        idx = self.index(col, row)
+        cell = self.cells[idx]
+        
+        # 1. 이미 열린 칸이어야 하고, 숫자가 있어야 함 (0이 아니어야 함)
+        if not cell.state.is_revealed or cell.state.adjacent == 0:
+            return
+            
+        # 2. 주변 깃발 개수 세기
+        neighbors = self.neighbors(col, row)
+        flag_count = 0
+        for (nc, nr) in neighbors:
+            if self.cells[self.index(nc, nr)].state.is_flagged:
+                flag_count += 1
+                
+        # 3. 깃발 개수와 숫자가 같으면 -> 깃발이 아닌 나머지 칸들 열기
+        if flag_count == cell.state.adjacent:
+            for (nc, nr) in neighbors:
+                target = self.cells[self.index(nc, nr)]
+                # 깃발이 아니고 닫혀있는 칸만 열기 (함정 발동 가능)
+                if not target.state.is_flagged and not target.state.is_revealed:
+                    self.reveal(nc, nr)
+
     def index(self, col: int, row: int) -> int:
-        """Return the flat list index for (col,row)."""
         return row * self.cols + col
 
     def is_inbounds(self, col: int, row: int) -> bool:
-        # TODO: Return True if (col,row) is inside the board bounds.
         return 0 <= col < self.cols and 0 <= row < self.rows
 
     def neighbors(self, col: int, row: int) -> List[Tuple[int, int]]:
-        # TODO: Return list of valid neighboring coordinates around (col,row).
         deltas = [
             (-1, -1), (0, -1), (1, -1),
             (-1, 0),            (1, 0),
             (-1, 1),  (0, 1),  (1, 1),
         ]
-
         result: List[Tuple[int, int]] = []
         for dc, dr in deltas:
             nc, nr = col + dc, row + dr
             if self.is_inbounds(nc, nr):
                 result.append((nc, nr))
-                
         return result
 
     def place_mines(self, safe_col: int, safe_row: int) -> None:
-        # TODO: Place mines randomly, guaranteeing the first click and its neighbors are safe. And Compute adjacency counts
         all_positions = [(c, r) for r in range(self.rows) for c in range(self.cols)]
         forbidden = {(safe_col, safe_row)} | set(self.neighbors(safe_col, safe_row))
         pool = [p for p in all_positions if p not in forbidden]
@@ -97,7 +105,6 @@ class Board:
             cell = self.cells[self.index(c, r)]
             cell.state.is_mine = True
 
-        # Compute adjacency counts
         for r in range(self.rows):
             for c in range(self.cols):
                 cell = self.cells[self.index(c, r)]
@@ -114,7 +121,6 @@ class Board:
         self._mines_placed = True
 
     def reveal(self, col: int, row: int) -> None:
-        # TODO: Reveal a cell; if zero-adjacent, iteratively flood to neighbors.
         if not self.is_inbounds(col, row):
             return
         if self.game_over:
@@ -158,7 +164,6 @@ class Board:
         self._check_win()
 
     def toggle_flag(self, col: int, row: int) -> None:
-        # TODO: Toggle a flag on a non-revealed cell.
         if not self.is_inbounds(col, row):
             return
         if self.game_over:
@@ -171,17 +176,14 @@ class Board:
         cell.state.is_flagged = not cell.state.is_flagged
 
     def flagged_count(self) -> int:
-        # TODO: Return current number of flagged cells.
         return sum(1 for cell in self.cells if cell.state.is_flagged)
 
     def _reveal_all_mines(self) -> None:
-        """Reveal all mines; called on game over."""
         for cell in self.cells:
             if cell.state.is_mine:
                 cell.state.is_revealed = True
 
     def _check_win(self) -> None:
-        """Set win=True when all non-mine cells have been revealed."""
         total_cells = self.cols * self.rows
         if self.revealed_count == total_cells - self.num_mines and not self.game_over:
             self.win = True
