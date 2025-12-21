@@ -70,21 +70,15 @@ class Renderer:
     def draw_header(self, remaining_mines: int, time_text: str, hints_left: int, high_score_text: str) -> None:
         pygame.draw.rect(self.screen, config.color_header, (0, 0, config.width, 60))
 
-        # [������] �ؽ�Ʈ ���� ������
-        
-        # 1. ���� (����)
         mines_label = self.header_font.render(f"Mines: {remaining_mines}", True, config.color_header_text)
         self.screen.blit(mines_label, (20, 12))
 
-        # 2. �ð� (150 -> 125�� ���)
         time_label = self.header_font.render(f"Time: {time_text}", True, config.color_header_text)
         self.screen.blit(time_label, (125, 12))
 
-        # 3. �ְ� ��� (300 -> 245�� ���)
         hs_label = self.header_font.render(f"Best: {high_score_text}", True, (255, 215, 0))
         self.screen.blit(hs_label, (245, 12))
 
-        # 4. ��Ʈ ��ư (���߾�)
         hint_btn_rect = Rect(0, 0, 80, 30)
         hint_btn_rect.centerx = config.width // 2
         hint_btn_rect.top = 10
@@ -97,7 +91,6 @@ class Renderer:
         text_rect = hint_text.get_rect(center=hint_btn_rect.center)
         self.screen.blit(hint_text, text_rect)
 
-        # 5. ���̵� ��ư (������ �� ����)
         buttons = [("Beg", 10, 8, 10), ("Int", 18, 14, 40), ("Adv", 24, 20, 99)]
         start_x = config.width - 160 
         
@@ -168,7 +161,6 @@ class InputController:
 
     def handle_mouse(self, pos, button) -> None:
         if pos[1] < 60 and button == config.mouse_left:
-            # ��Ʈ ��ư Ŭ��
             hint_btn_rect = Rect(0, 0, 80, 30)
             hint_btn_rect.centerx = config.width // 2
             hint_btn_rect.top = 10
@@ -181,7 +173,6 @@ class InputController:
                         self.game.hints_left -= 1
                 return
 
-            # ���̵� ��ư Ŭ��
             buttons = [(10, 8, 10), (18, 14, 40), (24, 20, 99)]
             start_x = config.width - 160
             for i, (cols, rows, mines) in enumerate(buttons):
