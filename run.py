@@ -73,18 +73,30 @@ class Renderer:
         pygame.draw.rect(self.screen, config.color_grid, rect, 1)
 
     def draw_header(self, remaining_mines: int, time_text: str) -> None:
-        """Draw the header bar containing remaining mines and elapsed time."""
-        pygame.draw.rect(
-            self.screen,
-            config.color_header,
-            Rect(0, 0, config.width, config.margin_top - 4),
-        )
-        left_text = f"Mines: {remaining_mines}"
-        right_text = f"Time: {time_text}"
-        left_label = self.header_font.render(left_text, True, config.color_header_text)
-        right_label = self.header_font.render(right_text, True, config.color_header_text)
-        self.screen.blit(left_label, (10, 12))
-        self.screen.blit(right_label, (config.width - right_label.get_width() - 10, 12))
+        # [수정됨] config.color_header_bg -> config.color_header 로 변경
+        pygame.draw.rect(self.screen, config.color_header, (0, 0, config.width, config.margin_top))
+        
+        # 1. 지뢰 개수 / 시간 표시
+        mines_label = self.header_font.render(f"Mines: {remaining_mines}", True, config.color_header_text)
+        self.screen.blit(mines_label, (20, 12))
+        
+        time_label = self.header_font.render(time_text, True, config.color_header_text)
+        self.screen.blit(time_label, (150, 12))
+
+        # 2. 난이도 버튼 (Beg, Int, Adv)
+        buttons = [("Beg", 10, 8, 10), ("Int", 18, 14, 40), ("Adv", 24, 20, 99)]
+        
+        start_x = config.width - 160 
+        
+        for i, (name, c, r, m) in enumerate(buttons):
+            btn_rect = Rect(start_x + (i * 50), 10, 45, 30)
+            
+            pygame.draw.rect(self.screen, (200, 200, 200), btn_rect)
+            pygame.draw.rect(self.screen, (50, 50, 50), btn_rect, 2)
+            
+            text = self.font.render(name, True, (0, 0, 0))
+            text_rect = text.get_rect(center=btn_rect.center)
+            self.screen.blit(text, text_rect)
 
     def draw_result_overlay(self, text: str | None) -> None:
         """Draw a semi-transparent overlay with centered result text and a Restart button."""
@@ -138,25 +150,44 @@ class InputController:
         return -1, -1
 
     def handle_mouse(self, pos, button) -> None:
-        # TODO: Handle mouse button events: left=reveal, right=flag, middle=neighbor highlight
-        
-        # 1. 게임이 끝난 상태(게임 오버 또는 승리)인지 확인
+        # 1. 상단 난이도 버튼 클릭 처리
+        if pos[1] < config.margin_top and button == config.mouse_left:
+            buttons = [
+                (10, 8, 10),   # 초급 (10*8, 지뢰 10)
+                (18, 14, 40),  # 중급 (18*14, 지뢰 40)
+                (24, 20, 99)   # 상급 (24*20, 지뢰 99)
+            ]
+            
+            start_x = config.width - 160
+            for i, (cols, rows, mines) in enumerate(buttons):
+                btn_rect = Rect(start_x + (i * 50), 10, 45, 30)
+                
+                if btn_rect.collidepoint(pos):
+                    # [요구사항 구현] 난이도별 설정값 변경
+                    config.cols = cols
+                    config.rows = rows
+                    config.num_mines = mines
+                    
+                    # 그리드가 바뀌었으니 화면 크기도 그에 맞춰 갱신 (안하면 맵이 잘림)
+                    config.width = config.margin_left + config.cols * config.cell_size + config.margin_right
+                    config.height = config.margin_top + config.rows * config.cell_size + config.margin_bottom
+                    self.game.screen = pygame.display.set_mode((config.width, config.height))
+                    
+                    self.game.reset()
+                    return
+
+        # 2. 게임 종료 시 재시작 버튼 (아까 구현한 것 유지)
         if self.game.board.game_over or self.game.board.win:
-            # 좌클릭인 경우만 처리
             if button == config.mouse_left:
-                # 버튼 위치를 다시 계산 (그리기 함수와 동일한 위치)
                 btn_rect = Rect(0, 0, 140, 50)
                 btn_rect.center = (config.width // 2, config.height // 2 + 50)
-                
-                # 마우스 클릭 위치(pos)가 버튼 안에 있는지 확인
                 if btn_rect.collidepoint(pos):
-                    self.game.reset() # 게임 재시작
-            return # 게임이 끝났으면 지뢰 클릭 등은 무시하고 리턴
-
-        # --- 아래는 기존 게임 플레이 로직 ---
-        col, row = self.pos_to_grid(pos[0], pos[1])
-        if col == -1:
+                    self.game.reset()
             return
+
+        # 3. 게임 플레이 로직 (기존 코드 유지)
+        col, row = self.pos_to_grid(pos[0], pos[1])
+        if col == -1: return
             
         game = self.game
         if button == config.mouse_left:
@@ -173,8 +204,7 @@ class InputController:
         elif button == config.mouse_middle:
             neighbors = game.board.neighbors(col, row)
             game.highlight_targets = {
-                (nc, nr)
-                for (nc, nr) in neighbors
+                (nc, nr) for (nc, nr) in neighbors
                 if not game.board.cells[game.board.index(nc, nr)].state.is_revealed
             }
             game.highlight_until_ms = pygame.time.get_ticks() + config.highlight_duration_ms
