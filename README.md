@@ -13,16 +13,19 @@
 
 모든 안전한 셀을 열면 게임 클리어, 지뢰가 있는 셀을 열면 게임 오버입니다.
 
-
+<img src="screenshots/start.png" width="400">
 
 ## 1. 난이도 선택
 헤더의 버튼을 이용해 난이도를 선택할 수 있습니다.
 | 난이도 | 보드 크기 | 지뢰 개수 |
 |------|----------|----------|
-| Beginner | 10 × 8 | 10 |
-| Intermediate | 18 × 14 | 40 |
-| Advanced | 24 × 20 | 99 |
+| Beg(초급) | 10 × 8 | 10 |
+| Int(중급) | 18 × 14 | 40 |
+| Adv(상급) | 24 × 20 | 99 |
 
+<img src="screenshots/beg.png" width="300"> 
+<img src="screenshots/int.png" width="400">
+<img src="screenshots/adv.png" width="500">
 
 ## 2. 힌트
 `H` 키 또는 상단의 `힌트` 버튼을 이용해 힌트를 사용할 수 있습니다.
@@ -31,7 +34,7 @@
 
 게임 중 최대 2회 사용 가능합니다.
 
-
+<img src="screenshots/hint.png" width="400">
 
 ## 3. 숫자 셀 자동 열기(Chording)
 숫자 셀에서 `Shift + 우클릭`으로 자동 열기가 가능합니다.
@@ -40,7 +43,7 @@
 
 실제 지뢰찾기 게임의 chording 동작을 구현한 기능으로, 깃발이 설치되지 않은 셀에 지뢰가 있다면 게임 오버입니다.
 
-
+<img src="screenshots/chording.jpg" width="400">
 
 ## 4. 최단 기록 저장
 게임 클리어 시 소요시간을 기록합니다.
@@ -49,11 +52,11 @@
 
 최고 기록은 `highsocre.txt` 파일에 저장되며, 헤더에 표시됩니다.
 
-
+<img src="screenshots/time.png" width="400">
 
 ## 5. 게임 종료 및 재시작
 게임 클리어 또는 게임 오버 시 표시되는 오버레이에 재시작 버튼을 추가하였습니다.
 
 재시작 버튼 또는 `R`키로 재시작 할 수 있습니다.
 
----
+<img src="screenshots/restart.png" width="400">
